@@ -1,0 +1,4 @@
+/home/alphred/ALPHRED_V3/Util/vnDataCollect/CMakeFiles/edit_cache.dir
+/home/alphred/ALPHRED_V3/Util/vnDataCollect/CMakeFiles/rebuild_cache.dir
+/home/alphred/ALPHRED_V3/Util/vnDataCollect/CMakeFiles/vnDataCollect.dir
+/home/alphred/ALPHRED_V3/Util/vnDataCollect/CMakeFiles/libvncxx.dir

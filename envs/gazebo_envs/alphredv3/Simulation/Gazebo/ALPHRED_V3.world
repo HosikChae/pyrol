@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+    <world name="default">
+            <include>
+                <uri>model://ground_plane</uri>
+            </include>
+            <include>
+                <uri>model://sun</uri>
+            </include>
+            <include>
+                <uri>model://ALPHRED_V3</uri>
+
+                <plugin name="gazebo_ros_interface"
+                    filename="libgazebo_model_interface.so">
+                    <robot_name>/ALPHRED</robot_name>
+                    <state_publish_rate>1</state_publish_rate>
+                </plugin>  
+                <pose>0 0 0.1786 0 0 0</pose>
+            </include>
+
+        <plugin name="gazebo_world_plugin" filename="libgazebo_world_interface.so">
+            <world_name>/world</world_name>
+        </plugin>
+    </world>
+</sdf>

@@ -1,0 +1,1 @@
+/usr/bin/c++      CMakeFiles/vnDataCollect.dir/main.cpp.o CMakeFiles/vnDataCollect.dir/CSVWriter.cpp.o  -o vnDataCollect liblibvncxx.a -lpthread 
