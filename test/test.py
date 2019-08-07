@@ -32,6 +32,7 @@ def ppo_continuous(**kwargs):
     config.max_steps = 1e6
     config.state_normalizer = MeanStdNormalizer()
     run_steps(PPOAgent(config))
+    # test
 
 
 if __name__ == '__main__':
