@@ -68,9 +68,10 @@ if __name__ == '__main__':
     # select_device(-1)
     select_device(0)
 
-    from envs.gazebo_envs import register_gazebo_env
+    import pyrol.envs
+    from pyrol.envs.gazebo import register_gym_gazebo
     env_id = 'Alphred-v3'
-    register_gazebo_env(env_id)
+    register_gym_gazebo(env_id)
     ppo_continuous(game=env_id, sim='gazebo')
 
     # ppo_continuous(game='Pendulum-v0')
