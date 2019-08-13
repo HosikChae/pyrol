@@ -4,17 +4,14 @@ from gym.utils import seeding
 import numpy as np
 from os import path
 
-class PendulumEnv(gym.Env):
-    metadata = {
-        'render.modes' : ['human', 'rgb_array'],
-        'video.frames_per_second' : 30
-    }
 
-    def __init__(self, g=10.0):
+class PendulumEnv(gym.Env):
+
+    def __init__(self):
         self.max_speed=8
         self.max_torque=2.
         self.dt=.05
-        self.g = g
+        self.g = 9.8
         self.viewer = None
 
         high = np.array([1., 1., self.max_speed])

@@ -2,8 +2,11 @@ def gym_register(sim):
     if sim == 'gazebo':
         from .gazebo import register_all_envs
         register_all_envs()
-    elif sim == 'maths'
-        from
+    elif sim == 'maths':
+        from .maths import register_all_envs
+        register_all_envs()
+    else:
+        raise Exception('Please enter in a valid simulator.')
 
     return None
 

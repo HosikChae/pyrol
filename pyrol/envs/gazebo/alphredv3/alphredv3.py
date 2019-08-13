@@ -1,6 +1,6 @@
 from .Settings.RobotData import ALPHREDV3 as ALPHRED_V3
 from gazebopy import RobotInterface as GazeboRobotInterface
-from ALPHRED_V3_files.Util import MathFcn as MF
+from .Util import MathFcn as MF
 from ..gazebo_env import GazeboEnv
 from .Settings.Macros_ALPHREDV3 import *
 import numpy as np
