@@ -1,0 +1,1 @@
+from .alphredv3 import ALPHREDV3
