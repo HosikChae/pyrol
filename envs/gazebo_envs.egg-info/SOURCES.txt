@@ -1,7 +1,0 @@
-README.md
-setup.py
-gazebo_envs.egg-info/PKG-INFO
-gazebo_envs.egg-info/SOURCES.txt
-gazebo_envs.egg-info/dependency_links.txt
-gazebo_envs.egg-info/requires.txt
-gazebo_envs.egg-info/top_level.txt
