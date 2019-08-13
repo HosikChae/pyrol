@@ -160,7 +160,7 @@ class ALPHREDV3(ALPHRED_V3, GazeboEnv):
         return done
 
     def sim_step(self, action):
-        self._take(np.multiply(action, TORQUE_MAX))  # because actions normalized to -1 to 1
+        self._take(action * TORQUE_MAX)  # because actions normalized to -1 to 1
         self.simulator.step_simulation()
 
     def jump_reward(self, z_before, z_after, action):
