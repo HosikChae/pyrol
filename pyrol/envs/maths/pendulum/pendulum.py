@@ -8,7 +8,7 @@ from scipy.integrate import odeint
 def _pendulum_model(y, t, m, g, l, b, u, th_ddot0):
     th, th_dot = y
     dydt = [th_dot,
-            (- b * th_dot - m * g * l * np.sin(th) + u) / (m * l ** 2) + th_ddot0]
+            (- b * th_dot - m * g * l * np.sin(th) + u) / (m * l ** 2) - th_ddot0]
     return dydt
 
 
@@ -17,9 +17,10 @@ if __name__ =='__main__':
     g = 9.8
     l = 1.
     b = 0.01
-    u = np.array([10., 0., 0., 0., 0., 0., 0., 10., 0., 0., 0., 0., 0., 0.])
+    u = np.zeros(200)
+    u[0] = 0.
     dt = 0.5
-    y0 = [0., 0.]
+    y0 = [np.pi, 0.]
     th_ddot0 = 0.
     time = 0.
     trajectory = np.zeros((1, 2))
@@ -82,14 +83,9 @@ class PendulumEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-
-
     def _run_dynamics(self, u):
-        self._pendulum_model(u)
-
-
-
-
+        _pendulum_model(u)
+        # TODO: complete this function and add noisy measurements
 
     def apply_torque(self, u):
         u = u + np.random.normal(loc=0., scale=self.actuator_noise)
@@ -97,11 +93,8 @@ class PendulumEnv(gym.Env):
         self._run_dynamics(u)
         return None
 
-
     def step(self, u):
         self.apply_torque(u)
-
-
 
         th, thdot = self.state # th := theta
 
