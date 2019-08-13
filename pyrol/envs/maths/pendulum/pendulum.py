@@ -2,29 +2,107 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 import numpy as np
-from os import path
+from scipy.integrate import odeint
+
+
+def _pendulum_model(y, t, m, g, l, b, u, th_ddot0):
+    th, th_dot = y
+    dydt = [th_dot,
+            (- b * th_dot - m * g * l * np.sin(th) + u) / (m * l ** 2) + th_ddot0]
+    return dydt
+
+
+if __name__ =='__main__':
+    m = 1.
+    g = 9.8
+    l = 1.
+    b = 0.01
+    u = np.array([10., 0., 0., 0., 0., 0., 0., 10., 0., 0., 0., 0., 0., 0.])
+    dt = 0.5
+    y0 = [0., 0.]
+    th_ddot0 = 0.
+    time = 0.
+    trajectory = np.zeros((1, 2))
+    for i in range(u.size):
+        t = np.linspace(i * dt, dt, 10)
+        sol = odeint(_pendulum_model, y0, t, args=(m, g, l, b, u[i], th_ddot0))
+        th = sol[-1, 0]
+        th_dot = sol[-1, 1]
+        y0 = [th, th_dot]
+        th_ddot0 = (- b * th_dot - m * g * l * np.sin(th) + u[i]) / (m * l ** 2)
+        # th_ddot0 = 0
+        trajectory = np.concatenate((trajectory, sol[1:]))
+        time = time + dt
+
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('tkagg')
+
+    plt.plot(np.linspace(0, time, trajectory.shape[0]), trajectory[:, 0], 'b', label='theta(t)')
+    plt.plot(np.linspace(0, time, trajectory.shape[0]), trajectory[:, 1], 'g', label='th_dot(t)')
+    plt.legend(loc='best')
+    plt.xlabel('t')
+    plt.grid()
+    plt.show()
 
 
 class PendulumEnv(gym.Env):
 
-    def __init__(self):
-        self.max_speed=8
-        self.max_torque=2.
-        self.dt=.05
-        self.g = 9.8
-        self.viewer = None
+    def __init__(self,
+                 measurement_noise=0.,
+                 actuator_noise=0.,
+                 length=1.,
+                 damping=0.1,
+                 mass=1.,
+                 max_speed=10.,
+                 max_torque=2.,
+                 seed=100,
+                 step_dt=0.005,
+                 g=9.807
+                 ):
+        self.measurement_noise = measurement_noise
+        self.actuator_noise = actuator_noise
+        self.l = length
+        self.m = mass
+        self.b = damping
+        self.max_speed = max_speed
+        self.max_torque = max_torque
+        self.step_dt = step_dt
+        self.g = g
 
-        high = np.array([1., 1., self.max_speed])
-        self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float64)
+        obs_max = np.array([1., 1., self.max_speed])
+        self.observation_space = spaces.Box(low=-obs_max, high=obs_max, dtype=np.float64)
 
-        self.seed()
+        self.np_random = None
+        self.seed(seed)
+        self.state = np.zeros(4, dtype=np.float64)  # th, th_dot, th_ddot, time
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def step(self,u):
+
+
+    def _run_dynamics(self, u):
+        self._pendulum_model(u)
+
+
+
+
+
+    def apply_torque(self, u):
+        u = u + np.random.normal(loc=0., scale=self.actuator_noise)
+        u = np.clip(u, -self.max_torque, self.max_torque)
+        self._run_dynamics(u)
+        return None
+
+
+    def step(self, u):
+        self.apply_torque(u)
+
+
+
         th, thdot = self.state # th := theta
 
         g = self.g
@@ -32,7 +110,6 @@ class PendulumEnv(gym.Env):
         l = 1.
         dt = self.dt
 
-        u = np.clip(u, -self.max_torque, self.max_torque)[0]
         self.last_u = u # for rendering
         costs = angle_normalize(th)**2 + .1*thdot**2 + .001*(u**2)
 
@@ -53,36 +130,9 @@ class PendulumEnv(gym.Env):
         theta, thetadot = self.state
         return np.array([np.cos(theta), np.sin(theta), thetadot])
 
-    def render(self, mode='human'):
-
-        if self.viewer is None:
-            from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(500,500)
-            self.viewer.set_bounds(-2.2,2.2,-2.2,2.2)
-            rod = rendering.make_capsule(1, .2)
-            rod.set_color(.8, .3, .3)
-            self.pole_transform = rendering.Transform()
-            rod.add_attr(self.pole_transform)
-            self.viewer.add_geom(rod)
-            axle = rendering.make_circle(.05)
-            axle.set_color(0,0,0)
-            self.viewer.add_geom(axle)
-            fname = path.join(path.dirname(__file__), "assets/clockwise.png")
-            self.img = rendering.Image(fname, 1., 1.)
-            self.imgtrans = rendering.Transform()
-            self.img.add_attr(self.imgtrans)
-
-        self.viewer.add_onetime(self.img)
-        self.pole_transform.set_rotation(self.state[0] + np.pi/2)
-        if self.last_u:
-            self.imgtrans.scale = (-self.last_u/2, np.abs(self.last_u)/2)
-
-        return self.viewer.render(return_rgb_array = mode=='rgb_array')
+    def render(self):
+        pass
 
     def close(self):
-        if self.viewer:
-            self.viewer.close()
-            self.viewer = None
+        pass
 
-def angle_normalize(x):
-    return (((x+np.pi) % (2*np.pi)) - np.pi)
