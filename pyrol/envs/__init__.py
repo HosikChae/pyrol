@@ -4,6 +4,6 @@ def gym_register(sim):
         register_all_envs()
     elif sim == 'maths'
         from
-
+dfgd
     return None
 
