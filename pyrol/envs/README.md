@@ -64,4 +64,3 @@ class FooEnv(gym.Env):
   def render(self, mode='human', close=False):
     ...
 ```
-test
