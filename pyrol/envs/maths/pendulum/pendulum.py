@@ -5,33 +5,31 @@ import numpy as np
 from scipy.integrate import odeint
 
 
-def _pendulum_model(y, t, m, g, l, b, u, th_ddot0):
+def _pendulum_model(y, t, m, g, l, b, u):
     th, th_dot = y
     dydt = [th_dot,
-            (- b * th_dot - m * g * l * np.sin(th) + u) / (m * l ** 2) - th_ddot0]
+            (u - b * th_dot - m * g * l * np.sin(th)) / (m * l ** 2)]
     return dydt
 
 
 if __name__ =='__main__':
     m = 1.
-    g = 9.8
+    g = 5.  # 9.8
     l = 1.
-    b = 0.01
+    b = 0.25
     u = np.zeros(200)
-    u[0] = 0.
-    dt = 0.5
-    y0 = [np.pi, 0.]
+    u[0] = 10.
+    dt = 0.005
+    y0 = [0., 0.]
     th_ddot0 = 0.
     time = 0.
-    trajectory = np.zeros((1, 2))
+    trajectory = np.array([y0])
     for i in range(u.size):
-        t = np.linspace(i * dt, dt, 10)
-        sol = odeint(_pendulum_model, y0, t, args=(m, g, l, b, u[i], th_ddot0))
+        t = np.linspace(dt * i, dt * (i + 1), 10)
+        sol = odeint(_pendulum_model, y0, t, args=(m, g, l, b, u[i]))
         th = sol[-1, 0]
         th_dot = sol[-1, 1]
         y0 = [th, th_dot]
-        th_ddot0 = (- b * th_dot - m * g * l * np.sin(th) + u[i]) / (m * l ** 2)
-        # th_ddot0 = 0
         trajectory = np.concatenate((trajectory, sol[1:]))
         time = time + dt
 
@@ -39,8 +37,8 @@ if __name__ =='__main__':
     import matplotlib
     matplotlib.use('tkagg')
 
-    plt.plot(np.linspace(0, time, trajectory.shape[0]), trajectory[:, 0], 'b', label='theta(t)')
-    plt.plot(np.linspace(0, time, trajectory.shape[0]), trajectory[:, 1], 'g', label='th_dot(t)')
+    plt.plot(np.linspace(0, time, trajectory.shape[0] - 1), trajectory[1:, 0], 'b', label='theta(t)')
+    plt.plot(np.linspace(0, time, trajectory.shape[0] - 1), trajectory[1:, 1], 'g', label='th_dot(t)')
     plt.legend(loc='best')
     plt.xlabel('t')
     plt.grid()
