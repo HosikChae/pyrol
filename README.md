@@ -1,7 +1,7 @@
-# PyRoL
+# PyROL
 ## About Me
 This project implements a framework based on PyTorch
-for Robotic control and Learning algorithms (PyRoL).
+for Robotics control, Optimization, and Learning algorithms (PyROL).
 Many of the algorithms here will be referenced to
 rightful authors. Many state-of-the-art machine learning
 and classical control algorithms are developed in an
@@ -28,4 +28,13 @@ well, which you can cite. Other than our own algorithms only
 if you feel like we've deserved a citation please feel
 free to do so.
 
-
+```text
+@misc{gabetogashi,
+    title = {PyROL: PyTorch framework for Robotics control, Optimization, and Learning},
+    author = {Fernandez, Gabriel and Togashi, Colin}
+    year = {2019},
+    publisher = {GitHub},
+    journal = {GitHub Repository},
+    howpublished = {\url{https://github.com/gabriel80808/PyROL}},
+}
+```

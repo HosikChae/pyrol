@@ -3,17 +3,15 @@ from gym import spaces
 from gym.utils import seeding
 import numpy as np
 from scipy.integrate import odeint
+from pyrol.utils.math_utils import remainder
+from pyrol.envs.maths.pendulum.animation import PendulumAnimation
 
 
 def _pendulum_model(y, t, m, g, l, b, u):
     th, th_dot = y
     dydt = [th_dot,
-            (u - b * th_dot - m * g * l * np.sin(th)) / (m * l ** 2)]
+            (u - b * th_dot + m * g * l * np.sin(th)) / (m * l ** 2)]
     return dydt
-
-
-def remainder(x, y):
-    return x - x * (np.abs(x) // y)
 
 
 class PendulumEnv(gym.Env):
@@ -33,6 +31,7 @@ class PendulumEnv(gym.Env):
                  g=9.807,
                  th0=0.,
                  th_dot0=0.,
+                 render=True,
                  ):
         self.measurement_noise = measurement_noise
         self.actuator_noise = actuator_noise
@@ -47,7 +46,7 @@ class PendulumEnv(gym.Env):
         self.g = g
 
         self.action_space = spaces.Box(low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float64)
-        obs_max = np.array([1., 1., self.max_speed])
+        obs_max = np.array([np.pi, self.max_speed])  # th, th_dot
         self.observation_space = spaces.Box(low=-obs_max, high=obs_max, dtype=np.float64)
 
         self.np_random = None
@@ -57,6 +56,10 @@ class PendulumEnv(gym.Env):
         self.state = np.array([self.th0, self.th_dot0, 0.], dtype=np.float64)  # th, th_dot, time
         self._init_state()  # Noisy starting position
         self.traj = np.array([[self.state[0].copy(), self.state[1].copy()]])
+
+        self.do_render = render
+        if self.do_render:
+            self.animate = self.render()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -85,20 +88,22 @@ class PendulumEnv(gym.Env):
 
     def _measure(self):
         th = self.state[0].copy() + np.random.normal(loc=0., scale=self.measurement_noise)
-        th = th % (2 * np.pi)
+        th = remainder(th, (2 * np.pi))
         th_dot = self.state[1].copy() + np.random.normal(loc=0., scale=self.measurement_noise)
-        return th, th_dot
+        return np.array([th, th_dot], dtype=np.float64)
 
     def step(self, u):
         self.apply_torque(u)
-        th, th_dot = self._measure()
+        x = np.absolute(self._measure())
+        Q = np.matrix([[1.0, 0.], [0., 1.0]], dtype=np.float64)
+        R = np.matrix([[1]], dtype=np.float64)
+        costs = np.matrix([x]) @ Q @ np.matrix([x]).T + u @ R @ np.transpose(u)
+        costs = costs.item()
 
-        x = np.array([[th], [th_dot]], dtype=np.float64)
-        Q = np.array([[1.0, 0.], [0., 1.0]], dtype=np.float64)
-        R = np.array([1], dtype=np.float64)
-        costs = x * Q * np.transpose(x) + u * R * np.transpose(u)
+        if self.do_render:
+            self.animate.update(theta=self.state[0], time=self.state[2], u=u[0])
 
-        return x, -costs, False, {}
+        return x, costs, False, {}
 
     def _init_state(self):
         th, th_dot = np.array([self.th0, self.th_dot0]) + np.random.normal(size=2, loc=0., scale=self.initialization_noise)
@@ -106,63 +111,74 @@ class PendulumEnv(gym.Env):
 
     def reset(self):
         self._init_state()
+        if self.do_render:
+            self.animate.update(theta=self.state[0], time=self.state[2], u=0.)
         return self._measure()
 
     def render(self, mode='human'):
-        pass
+        return PendulumAnimation(theta=self.state[0], time=self.state[2], u=0.)
 
     def close(self):
-        pass
-
-
-if __name__ =='__main__':
-    # Test 2: Test if the class in gazebo env works properly
-    pend = PendulumEnv(g=5., damping=0.25, step_dt=0.05, th0=np.pi-0.1, max_torque=10.)
-    count = 0
-    while pend.state[2] < 100:
-        if count % 500 == 0:
-            u = 100.
+        if self.do_render:
+            self.animate.close()
         else:
-            u = 0.
-        pend.step(u)
-        count = count + 1
-    traj = pend.traj.copy()
-    import matplotlib.pyplot as plt
+            pass
 
-    plt.plot(np.linspace(0, pend.state[2], traj.shape[0]), traj[:, 0], 'b', label='theta(t)')
-    plt.plot(np.linspace(0, pend.state[2], traj.shape[0]), traj[:, 1], 'g', label='th_dot(t)')
-    plt.legend(loc='best')
-    plt.xlabel('t')
-    plt.grid()
-    plt.show()
 
-#     # Test 1: test pendulum dynamics
-#     m = 1.
-#     g = 5.  # 9.8
-#     l = 1.
-#     b = 0.25
-#     u = np.zeros(200)
-#     u[0] = 0.
-#     dt = 0.05
-#     y0 = [np.pi-.1, 0.]
-#     th_ddot0 = 0.
-#     time = 0.
-#     trajectory = np.array([y0])
-#     for i in range(u.size):
-#         t = np.linspace(dt * i, dt * (i + 1), 10)
-#         sol = odeint(_pendulum_model, y0, t, args=(m, g, l, b, u[i]))
-#         th = remainder(sol[-1, 0], (2 * np.pi))
-#         th_dot = sol[-1, 1]
-#         y0 = [th, th_dot]
-#         trajectory = np.concatenate((trajectory, sol[1:]))
-#         time = time + dt
+# if __name__ =='__main__':
+#     # Test 2: Test if the class in gazebo env works properly
+#     pend = PendulumEnv(g=5., damping=0.25, step_dt=0.05, th0=0 - 0.01, max_torque=10.)
 #
-#     import matplotlib.pyplot as plt
-#
-#     plt.plot(np.linspace(0, time, trajectory.shape[0] - 1), trajectory[1:, 0], 'b', label='theta(t)')
-#     plt.plot(np.linspace(0, time, trajectory.shape[0] - 1), trajectory[1:, 1], 'g', label='th_dot(t)')
-#     plt.legend(loc='best')
-#     plt.xlabel('t')
-#     plt.grid()
-#     plt.show()
+#     count = 0
+#     while pend.state[2] < 10:
+#         if count % 5 == 0:
+#             u = -1.
+#         else:
+#             u = -1.
+#         pend.step(np.array([u]))
+#         count = count + 1
+#     pend.close()
+#     traj = pend.traj.copy()
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(np.linspace(0, pend.state[2], traj.shape[0]), traj[:, 0], 'b', label='theta(t)')
+    # plt.plot(np.linspace(0, pend.state[2], traj.shape[0]), [np.pi] * traj[:, 0].size, 'k', label='pi~3.14')
+    # plt.plot(np.linspace(0, pend.state[2], traj.shape[0]), traj[:, 1], 'g', label='th_dot(t)')
+    # plt.legend(loc='best')
+    # plt.xlabel('t')
+    # plt.grid()
+    # plt.show(block=True)
+
+    # # Test 1: test pendulum dynamics
+    # m = 1.
+    # g = 5.  # 9.8
+    # l = 1.
+    # b = 0.25
+    # u = np.zeros(300)
+    # u[0] = 0.
+    # u[99] = 0.
+    # u[199] = 0.
+    # dt = 0.05
+    # y0 = [0. + .001, 0.]
+    # th_ddot0 = 0.
+    # time = 0.
+    # trajectory = np.array([y0])
+    # for i in range(u.size):
+    #     t = np.linspace(dt * i, dt * (i + 1), 10)
+    #     sol = odeint(_pendulum_model, y0, t, args=(m, g, l, b, u[i]))
+    #     th = remainder(sol[-1, 0], (2 * np.pi))
+    #     th_dot = sol[-1, 1]
+    #     y0 = [th, th_dot]
+    #     trajectory = np.concatenate((trajectory, sol[1:]))
+    #     time = time + dt
+    #
+    # import matplotlib.pyplot as plt
+    #
+    # plt.plot(np.linspace(0, time, trajectory.shape[0] - 1), trajectory[1:, 0], 'b', label='theta(t)')
+    # plt.plot(np.linspace(0, time, trajectory.shape[0] - 1), [np.pi] * trajectory[1:, 0].size, 'k', label='pi~3.14')
+    # plt.plot(np.linspace(0, time, trajectory.shape[0] - 1), trajectory[1:, 1], 'g', label='th_dot(t)')
+    # plt.legend(loc='best')
+    # plt.xlabel('t')
+    # plt.grid()
+    # plt.show(block=True)
 

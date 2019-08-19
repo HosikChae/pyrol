@@ -1,4 +1,4 @@
-from pyrol.other_files.deep_rl import *
+from pyrol.to_be_deleted.deep_rl import *
 
 
 def ppo_continuous(**kwargs):
@@ -44,6 +44,7 @@ if __name__ == '__main__':
 
     from pyrol.envs import gym_register
     sim = 'maths'
-    env_id = 'Pendulum-maths0'
-    # ppo_continuous(game='Pendulum-v0')
+    env_id = 'PendulumMaths-v0'
+    gym_register(sim)
+    ppo_continuous(game='PendulumMaths-v0')
 
