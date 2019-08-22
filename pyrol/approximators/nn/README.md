@@ -28,3 +28,9 @@ Chris Watkins Built off of Richard Bellman's Dynamic Programming and the Bellman
 }
 ```
 
+##### torch.nn Notes
+-nn.Linear already has an initialization of
+Linear.weight = U(- k**0.5, k **0.5), where k = 1/ in_features, where in_features are size
+of each input sample
+y = x A.' + b, notice that A is transposed  
+-Linear.bias is the same
