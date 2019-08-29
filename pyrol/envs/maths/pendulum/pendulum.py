@@ -22,16 +22,17 @@ class PendulumEnv(gym.Env):
                  initialization_noise=0.,
                  length=1.,
                  damping=0.1,
-                 mass=1.,
+                 mass=0.01,
                  max_speed=10.,
                  max_torque=2.,
                  seed=100,
                  step_dt=0.005,
                  dynamics_resolution=100,
                  g=9.807,
-                 th0=0.,
+                 th0=np.pi,
                  th_dot0=0.,
-                 render=True,
+                 render=False,
+                 # time_limit=10.,
                  ):
         self.measurement_noise = measurement_noise
         self.actuator_noise = actuator_noise
@@ -60,6 +61,7 @@ class PendulumEnv(gym.Env):
         self.do_render = render
         if self.do_render:
             self.animate = self.render()
+        # self.time_limit = time_limit
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -84,9 +86,8 @@ class PendulumEnv(gym.Env):
         u = u + np.random.normal(loc=0., scale=self.actuator_noise)
         u = np.clip(u, -self.max_torque, self.max_torque)
         self._run_dynamics(u)
-        return None
 
-    def _measure(self):
+    def observe(self):
         th = self.state[0].copy() + np.random.normal(loc=0., scale=self.measurement_noise)
         th = remainder(th, (2 * np.pi))
         th_dot = self.state[1].copy() + np.random.normal(loc=0., scale=self.measurement_noise)
@@ -94,7 +95,7 @@ class PendulumEnv(gym.Env):
 
     def step(self, u):
         self.apply_torque(u)
-        x = np.absolute(self._measure())
+        x = np.absolute(self.observe())  # self.observe()
         Q = np.matrix([[1.0, 0.], [0., 1.0]], dtype=np.float64)
         R = np.matrix([[1]], dtype=np.float64)
         costs = np.matrix([x]) @ Q @ np.matrix([x]).T + u @ R @ np.transpose(u)
@@ -103,7 +104,7 @@ class PendulumEnv(gym.Env):
         if self.do_render:
             self.animate.update(theta=self.state[0], time=self.state[2], u=u[0])
 
-        return x, costs, False, {}
+        return x, -costs, False, {}
 
     def _init_state(self):
         th, th_dot = np.array([self.th0, self.th_dot0]) + np.random.normal(size=2, loc=0., scale=self.initialization_noise)
@@ -113,7 +114,7 @@ class PendulumEnv(gym.Env):
         self._init_state()
         if self.do_render:
             self.animate.update(theta=self.state[0], time=self.state[2], u=0.)
-        return self._measure()
+        return self.observe()
 
     def render(self, mode='human'):
         return PendulumAnimation(theta=self.state[0], time=self.state[2], u=0.)

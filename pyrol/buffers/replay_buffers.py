@@ -1,10 +1,9 @@
 from collections import namedtuple
 import random
+import numpy as np
 
-Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
-
-class ReplayBase(object):
+class Base(object):
     r"""Replay Buffer Base Class
     Replay buffers can be used to store memory of transition states that can be used for training
     on. In the reinforcement learning a transition state is: ('state', 'action', 'next state', reward)
@@ -28,9 +27,10 @@ class ReplayBase(object):
         raise NotImplementedError
 
 
-class ReplayBufferBasic(ReplayBase):
+class ReplayBasic(Base):
     r"""Basic implementation of a replay buffer"""
-    def __init__(self, capacity):
+    def __init__(self, capacity, fields=('state', 'action', 'next_state', 'reward', 'done')):
+        self.Transition = namedtuple('Transition', fields)
         self.capacity = capacity
         self.memory = []
         self.position = 0
@@ -38,7 +38,7 @@ class ReplayBufferBasic(ReplayBase):
     def push(self, *args):
         if len(self.memory) < self.capacity:
             self.memory.append(None)
-        self.memory[self.position] = Transition(*args)
+        self.memory[self.position] = self.Transition(*args)
         self.position = (self.position + 1) % self.capacity
 
     def push_batch(self, batch):
@@ -46,7 +46,7 @@ class ReplayBufferBasic(ReplayBase):
             self.push(replay)
 
     def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+        return [np.stack(transition) for transition in [*zip(*random.sample(self.memory, batch_size))]]
 
     def __len__(self):
         return len(self.memory)
@@ -54,6 +54,3 @@ class ReplayBufferBasic(ReplayBase):
     def clear(self):
         self.memory.clear()
         self.position = 0
-
-
-

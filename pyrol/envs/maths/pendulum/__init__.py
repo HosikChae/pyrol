@@ -1,4 +1,4 @@
-from .pendulum import PendulumEnv
+from .pendulum import *
 # Pendulum-maths0 Environment
 
 

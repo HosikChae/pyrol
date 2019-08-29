@@ -34,3 +34,6 @@ Linear.weight = U(- k**0.5, k **0.5), where k = 1/ in_features, where in_feature
 of each input sample
 y = x A.' + b, notice that A is transposed  
 -Linear.bias is the same
+-Sequential is useful for connecting layers dyanmically
+-ModuleList is useful for dynamically connecting layers but doesn't automatically pass into `forward` there fore you can
+probe or use intermediate layer results like in an lstm

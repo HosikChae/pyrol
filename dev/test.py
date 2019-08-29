@@ -36,15 +36,15 @@ if __name__ == '__main__':
     # select_device(-1)
     select_device(0)
 
-    # from pyrol.envs import gym_register
+    # from pyrol.envs import gym_register_all
     # sim = 'gazebo'
     # env_id = 'Alphred-v3'
-    # gym_register(sim)
+    # gym_register_all(sim)
     # ppo_continuous(game=env_id, sim=sim)
 
-    from pyrol.envs import gym_register
+    from pyrol.envs import gym_register_envs
     sim = 'maths'
     env_id = 'PendulumMaths-v0'
-    gym_register(sim)
+    gym_register_envs(sim)
     ppo_continuous(game='PendulumMaths-v0')
 

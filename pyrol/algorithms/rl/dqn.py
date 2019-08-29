@@ -1,7 +1,6 @@
-import torch.nn as nn
+BATCH_SIZE = 128
+GAMMA = 0.999
+EPS_START = 0.9
+EPS_DECAY = 200
+TARGET_UPDATE = 10
 
-class DQN(nn.Module):
-
-    def __init__(self, q_model):
-        super(DQN, self).__init__()
-        self.q_model = q_model
