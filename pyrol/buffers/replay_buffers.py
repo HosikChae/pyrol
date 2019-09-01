@@ -32,12 +32,10 @@ class ReplayBasic(Base):
     def __init__(self, capacity, fields=('state', 'action', 'next_state', 'reward', 'done')):
         self.Transition = namedtuple('Transition', fields)
         self.capacity = capacity
-        self.memory = []
+        self.memory = [None] * self.capacity
         self.position = 0
 
     def push(self, *args):
-        if len(self.memory) < self.capacity:
-            self.memory.append(None)
         self.memory[self.position] = self.Transition(*args)
         self.position = (self.position + 1) % self.capacity
 
@@ -46,7 +44,10 @@ class ReplayBasic(Base):
             self.push(replay)
 
     def sample(self, batch_size):
-        return [np.stack(transition) for transition in [*zip(*random.sample(self.memory, batch_size))]]
+        transitions = []
+        for field_data in [*zip(*random.sample(list(filter(None, self.memory)), batch_size))]:
+            transitions.append(np.stack(field_data))
+        return transitions
 
     def __len__(self):
         return len(self.memory)
