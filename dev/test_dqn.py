@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from pyrol.approximators.nn import Actor, TD3Critic
 from pyrol.buffers import ReplayBasic
 from pyrol.runners import Runner
+from pyrol.utils.math_utils import polyak_avg
 
 
 class TD3(object):
@@ -28,9 +29,10 @@ class TD3(object):
 
         self.tau = tau
         self.gamma = gamma
+        self.device = device
 
     def select_action(self, state, noise=0.1):
-        state = torch.from_numpy(state.reshape(1, -1)).float().to(device)
+        state = torch.from_numpy(state.reshape(1, -1)).float().to(self.device)
         action = self.actor(state).cpu().data.numpy().flatten() + np.random.normal(0, noise, size=self.a_dim)
 
         return action.clip(self.min_a, self.max_a)
@@ -47,26 +49,26 @@ class TD3(object):
 
             state, action, next_state, reward, done = replay_buffer.sample(batch_size)
 
-            state = torch.from_numpy(state).float().to(device)
-            action = torch.from_numpy(action).float().to(device)
-            next_state = torch.from_numpy(next_state).float().to(device)
-            reward = torch.from_numpy(np.expand_dims(reward, axis=1)).float().to(device)
-            done = torch.from_numpy(np.expand_dims((1-done), axis=1)).float().to(device)
+            state = torch.from_numpy(state).float().to(self.device)
+            action = torch.from_numpy(action).float().to(self.device)
+            next_state = torch.from_numpy(next_state).float().to(self.device)
+            reward = torch.from_numpy(np.expand_dims(reward, axis=1)).float().to(self.device)
+            done = torch.from_numpy(np.expand_dims((1-done), axis=1)).float().to(self.device)
 
-            # Get noisy action
-            noise = action.clone().normal_(0, policy_noise).to(device)  # Need to detach?
+            # Noisy action
+            noise = action.clone().normal_(0, policy_noise).to(self.device)
             noise = noise.clamp(-noise_clip, noise_clip)
             next_action = self.actor_target(next_state) + noise
             next_action = next_action.clamp(-self.max_a, self.max_a)
 
-            # Compute the target Q value
-            target_Q1, target_Q2 = self.critic_target(next_state, next_action)
-            target_Q = torch.min(target_Q1, target_Q2)
-            target_Q = reward + done * self.gamma * target_Q  # .detach() not needed?
+            # Bellman update
+            target_q1, target_q2 = self.critic_target(next_state, next_action)
+            min_q = torch.min(target_q1, target_q2)
+            y = (reward + done * self.gamma * min_q).detach()
 
-            # Compute critic loss
-            current_Q1, current_Q2 = self.critic(state, action)
-            critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
+            # Critic loss
+            q1, q2 = self.critic(state, action)
+            critic_loss = F.mse_loss(q1, y) + F.mse_loss(q2, y)
 
             # Optimize critic
             self.critic_optimizer.zero_grad()
@@ -76,57 +78,41 @@ class TD3(object):
             # Delayed policy updates
             if update % policy_freq == 0:
 
-                # Compute actor loss
-                actor_loss = -self.critic.q1_out(state, self.actor(state)).mean()
+                # Actor loss
+                actor_loss = -self.critic.q1(torch.cat([state, self.actor(state)], 1)).mean()
 
                 # Optimize actor
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
                 self.actor_optimizer.step()
 
-                # Rolling update targets
+                # Polyak averaging
                 for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
-                    target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+                    target_param.data.copy_(polyak_avg(target_param.data, param.data, self.tau))
 
                 for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-                    target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+                    target_param.data.copy_(polyak_avg(target_param.data, param.data, self.tau))
 
     def save(self, filename, directory):
+        # TODO: Implement Save and Load functions
         # torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))
         # torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, filename))
         pass
 
-    def load(self, filename="best_avg", directory="./saves"):
+    def load(self, filename="best", directory="./log"):
         # self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, filename)))
         # self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, filename)))
         pass
 
 
-def evaluate_policy(policy, env, eps=100, render=False):
-    avg_reward = 0.
-    for i in range(eps):
-        state = env.reset()
-        done = False
-        while not done:
-            if render:
-                env.render()
-            action = policy.select_action(np.array(state), noise=0)
-            state, reward, done, _ = env.step(action)
-            avg_reward += reward
-
-    avg_reward /= eps
-
-    print(f'Evaluation Episodes: {eps} Average Score: {avg_reward}')
-    return avg_reward
-
-
-def train(agent, env, steps=int(5e6)):
+def train(agent, env, runner, steps=int(5e6)):
     eps_num, eps_reward, eps_step = 0, 0, 0
     env.reset()
     rewards = []
 
     for step in range(steps):
         # TODO: Implement step until done
+        # TODO: Get rid of false signals when horizon ends as in paper
         reward, done = runner.one_step()
         eps_step += 1
         eps_reward += reward
@@ -148,7 +134,7 @@ if __name__ == '__main__':
     env = gym.make('Pendulum-v0')  # "PendulumMaths-v0"  TODO: unwrap time wrapper
     # TODO: fix faulty done signal in replay buffer
     # TODO: add valid done signal in PendulumMaths-v0 file
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     env.seed(SEED)
     torch.manual_seed(SEED)
@@ -159,9 +145,5 @@ if __name__ == '__main__':
     runner = Runner(env, agent, replay_buffer)
 
     runner.populate_replay_buffer()
-    train(agent, env)
-
-    agent.load()
-    for i in range(100):
-        evaluate_policy(agent, env, render=True)
+    train(agent, env, runner)
 

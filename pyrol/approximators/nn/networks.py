@@ -58,8 +58,4 @@ class TD3Critic(nn.Module, Base):
         xu = torch.cat([x, u], 1)
         return self.q1(xu), self.q2(xu)
 
-    def q1_out(self, x, u):
-        xu = torch.cat([x, u], 1)
-        return self.q1(xu)
-
 

@@ -55,3 +55,4 @@ class ReplayBasic(Base):
     def clear(self):
         self.memory.clear()
         self.position = 0
+
