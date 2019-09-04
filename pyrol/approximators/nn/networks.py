@@ -50,7 +50,6 @@ class TD3Critic(nn.Module, Base):
     def __init__(self, state_dim, action_dim, hidden_dims=(400, 300)):
         super(TD3Critic, self).__init__()
         dims = (state_dim + action_dim,) + hidden_dims + (1,)
-
         self.q1 = linear_block(dims=dims, layer_activations=('relu', 'relu', 'linear'))
         self.q2 = linear_block(dims=dims, layer_activations=('relu', 'relu', 'linear'))
 

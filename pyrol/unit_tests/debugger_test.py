@@ -1,7 +1,7 @@
 import unittest
 import torch
 import torch.nn as nn
-from pyrol.utils.debugger import is_cuda
+from pyrol.utils.metrics import is_cuda
 from pyrol.approximators.nn import Actor
 
 

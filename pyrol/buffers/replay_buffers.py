@@ -2,6 +2,8 @@ from collections import namedtuple
 import random
 import numpy as np
 
+from pyrol.utils.pytorch import return_self
+
 
 class Base(object):
     r"""Replay Buffer Base Class
@@ -29,9 +31,10 @@ class Base(object):
 
 class ReplayBasic(Base):
     r"""Basic implementation of a replay buffer"""
-    def __init__(self, capacity, fields=('state', 'action', 'next_state', 'reward', 'done')):
+    def __init__(self, capacity, conversion=return_self, fields=('state', 'action', 'next_state', 'reward', 'done')):
         self.Transition = namedtuple('Transition', fields)
         self.capacity = capacity
+        self.type_conversion = conversion
         self.memory = [None] * self.capacity
         self.position = 0
 
@@ -46,7 +49,7 @@ class ReplayBasic(Base):
     def sample(self, batch_size):
         transitions = []
         for field_data in [*zip(*random.sample(list(filter(None, self.memory)), batch_size))]:
-            transitions.append(np.stack(field_data))
+            transitions.append(self.type_conversion(np.stack(field_data)))
         return transitions
 
     def __len__(self):
@@ -55,4 +58,21 @@ class ReplayBasic(Base):
     def clear(self):
         self.memory.clear()
         self.position = 0
+
+
+class TorchReplayBasic(ReplayBasic):
+    r"""Basic implementation of a replay buffer"""
+    def __init__(self,
+                 capacity,
+                 conversion=return_self,
+                 device='cpu',
+                 fields=('state', 'action', 'next_state', 'reward', 'done')):
+        super().__init__(capacity, conversion, fields)
+        self.device = device
+
+    def sample(self, batch_size):
+        transitions = []
+        for field_data in [*zip(*random.sample(list(filter(None, self.memory)), batch_size))]:
+            transitions.append(self.type_conversion(np.stack(field_data)).to(self.device))
+        return transitions
 
