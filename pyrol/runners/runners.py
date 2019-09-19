@@ -55,7 +55,7 @@ class TD3Runner(Runner):
         self.max_eps_steps = max_eps_steps
         self.eps_steps = 0
 
-    def step(self, initial_state, policy, steps=200):
+    def step(self, initial_state, policy, steps=200):  # TODO fix step range!!!!!
         state = initial_state
         for step in range(steps):
             action = policy(state)
@@ -77,10 +77,11 @@ class TD3Runner(Runner):
         self.state = next_state
         return reward, done, eps_finished
 
-    def train(self, batch_size=100, steps=int(1e6), eval_after=1000, avg_over=100):
+    def train(self, batch_size=100, steps=int(1e6), eval_after=100000, avg_over=100):
         eps_num, eps_reward, eps_step = 0, 0, 0
         self.env.reset()
         rewards = []
+        best_reward = -np.inf
 
         for step in range(steps):
             reward, done, eps_finished = self.one_step()
@@ -99,6 +100,10 @@ class TD3Runner(Runner):
                 if (step + 1) % eval_after == 0:
                     evaluate_policy(self.agent, self.env)
                     self.env.reset()
-                print(f'\rSteps: {step + 1} Episodes: {eps_num} Reward: {eps_reward:.2f} Avg Reward: {avg_reward:.2f}')
+                if avg_reward > best_reward:
+                    print('\n')
+                    best_reward = avg_reward
+                print(f'\rSteps: {step + 1} Episodes: {eps_num} Reward: {eps_reward:.2f} Avg Reward: {avg_reward:.2f}',
+                      end='')
                 eps_step, eps_reward = 0, 0
 

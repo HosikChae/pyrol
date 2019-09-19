@@ -1,6 +1,6 @@
-from collections import namedtuple
 import random
 import numpy as np
+from collections import namedtuple
 
 from pyrol.utils.pytorch import return_self
 
@@ -48,7 +48,7 @@ class ReplayBasic(Base):
 
     def sample(self, batch_size):
         transitions = []
-        for field_data in [*zip(*random.sample(list(filter(None, self.memory)), batch_size))]:
+        for field_data in [*zip(*random.choices(list(filter(None, self.memory)), k=batch_size))]:
             transitions.append(self.type_conversion(np.stack(field_data)))
         return transitions
 
@@ -61,7 +61,7 @@ class ReplayBasic(Base):
 
 
 class TorchReplayBasic(ReplayBasic):
-    r"""Basic implementation of a replay buffer"""
+    r"""Basic implementation of a replay buffer for PyTorch specific environments"""
     def __init__(self,
                  capacity,
                  conversion=return_self,
@@ -72,7 +72,7 @@ class TorchReplayBasic(ReplayBasic):
 
     def sample(self, batch_size):
         transitions = []
-        for field_data in [*zip(*random.sample(list(filter(None, self.memory)), batch_size))]:
+        for field_data in [*zip(*random.choices(list(filter(None, self.memory)), k=batch_size))]:
             transitions.append(self.type_conversion(np.stack(field_data)).to(self.device))
         return transitions
 

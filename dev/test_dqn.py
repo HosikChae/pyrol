@@ -1,5 +1,5 @@
-import gym
 import numpy as np
+import random
 import torch
 import torch.nn.functional as F
 
@@ -15,8 +15,8 @@ class TD3(object):
         self.env = env
         self.s_dim = np.prod(self.env.observation_space.shape)
         self.a_dim = np.prod(self.env.action_space.shape)
-        self.max_a = env.action_space.high.item()
-        self.min_a = env.action_space.low.item()
+        self.max_a = env.action_space.high[0].item()
+        self.min_a = env.action_space.low[0].item()
 
         self.actor = Actor(self.s_dim, self.a_dim, self.max_a).to(device)
         self.actor_target = Actor(self.s_dim, self.a_dim, self.max_a).to(device)
@@ -31,10 +31,10 @@ class TD3(object):
         self.tau = tau
         self.gamma = gamma
 
-        # Scale noise by env action magnitude
+        # Scale noise by env action magnitude can change this
         self.select_action_noise = self.max_a / 10
-        self.policy_noise = self.select_action_noise * 2
-        self.noise_clip = self.policy_noise * 2
+        self.policy_noise = self.select_action_noise * 2.
+        self.noise_clip = self.policy_noise * 2.5
 
         self.update_freq = update_freq
         self.device = device
@@ -49,7 +49,7 @@ class TD3(object):
 
     def train(self, state, action, next_state, reward, done, ep):
         # Noisy action
-        noise = action.clone().normal_(0, self.policy_noise).to(self.device)
+        noise = action.clone().cpu().normal_(0, self.policy_noise).to(self.device)
         noise = noise.clamp(-self.noise_clip, self.noise_clip)
         next_action = self.actor_target(next_state) + noise
         next_action = next_action.clamp(-self.max_a, self.max_a)
@@ -99,21 +99,27 @@ class TD3(object):
 
 
 if __name__ == '__main__':
-    SEED = 0
+    SEED = 1234
 
-    from pyrol.envs import gym_register_envs
-    gym_register_envs(sim='maths')
-    env = gym.make('PendulumMaths-v0').env  # "PendulumMaths-v0", 'Pendulum-v0'  TODO: unwrap time wrapper
+    import gym
+    import roboschool
+    env = gym.make('RoboschoolHopper-v1').env
+    # env = gym.make('Pendulum-v0').env  # TODO: unwrap time wrapper
+    # from pyrol.envs.maths.pendulum import PendulumEnv
+    # env = PendulumEnv()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     env.seed(SEED)
+    env.action_space.seed(SEED)
+    env.observation_space.seed(SEED)
     torch.manual_seed(SEED)
     np.random.seed(SEED)
+    random.seed(SEED)
 
     agent = TD3(env, device=device)
     replay_buffer = TorchReplayBasic(device=device, conversion=np2torch_float, capacity=1000000)
-    runner = TD3Runner(env, agent, replay_buffer, max_eps_steps=400)
+    runner = TD3Runner(env, agent, replay_buffer, max_eps_steps=1000)
 
     runner.populate_replay_buffer()
-    runner.train()
+    runner.train(batch_size=100)
 
