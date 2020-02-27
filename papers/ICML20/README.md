@@ -7,7 +7,7 @@ Practitioners often rely on compute-intensive domain randomization to ensure rei
 ```text
 @misc{fern2020deep,
     title={Deep Reinforcement Learning with Linear Quadratic Regulator Regions},
-    author={Gabriel I. Fernandez and Colin Togashi and Dennis W. Hong and \textbf{Lin F. Yang}},
+    author={Gabriel I. Fernandez and Colin Togashi and Dennis W. Hong and Lin F. Yang},
     year={2020},
     eprint={2002.09820},
     archivePrefix={arXiv},
