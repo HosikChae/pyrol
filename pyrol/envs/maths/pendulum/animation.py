@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from pyrol.plots.matplotlib_ext import DynamicUpdater
 
 
-class PendulumAnimation(DynamicUpdater):
+class PendulumAnimation(object):
     def __init__(self, theta=0., time=0., u=0., rod_length=1.):
         self.l = rod_length
         self.fig = plt.figure(figsize=(7., 7.))
@@ -20,13 +19,14 @@ class PendulumAnimation(DynamicUpdater):
 
     def close(self):
         plt.close()
+        plt.ioff()
 
     def update_marker(self, theta, u):
-        x = self.l * np.sin(theta)
+        x = -self.l * np.sin(theta)
         y = self.l * np.cos(theta)
-        dx = .1 * u * np.cos(theta)
-        dy = - .1 * u * np.sin(theta)
-        orientation = -theta * 180 / np.pi + np.sign(u) * -90
+        dx = -.1 * u * np.cos(theta)
+        dy = -.1 * u * np.sin(theta)
+        orientation = theta * 180 / np.pi + np.sign(u) * 90
         size = 10. * np.absolute(u)
         return x, y, dx, dy, orientation, size
 

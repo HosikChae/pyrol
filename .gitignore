@@ -1,0 +1,7 @@
+.vscode/launch.json
+.vscode/settings.json
+dev/*
+pyrol/envs/real/__pycache__/__init__.cpython-36.pyc
+pyrol/envs/real/__pycache__/real_env.cpython-36.pyc
+pyrol/envs/real/bear_pendulum/__pycache__/bear_pendulum.cpython-36.pyc
+pyrol/envs/real/bear_pendulum/__pycache__/constants.cpython-36.pyc

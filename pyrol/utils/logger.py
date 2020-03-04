@@ -5,6 +5,8 @@ import numpy as np
 import tensorflow as tf
 import os.path as osp, time, atexit, os
 
+### OPENAI LOGGER
+
 # color2num = dict(
 #     gray=30,
 #     red=31,
